@@ -1,0 +1,296 @@
+<html>
+
+<head>
+  <link rel="stylesheet" href="styles/app.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <header id="header">Charts</header>
+  <!-- <nav>
+    <ul>
+      <li id="nav-home"><a href="#home">Home</a></li>
+      <li id="nav-leads"><a href="#leads">Leads</a></li>
+      <li id="nav-opportunities">
+        <a href="#opportunities">Opportunities</a>
+      </li>
+      <li id="nav-reports"><a href="#reports">Reports</a></li>
+    </ul>
+  </nav> -->
+  <div class="container">
+    <div class="LeftChart top">
+      <canvas id="myChart"></canvas>
+    </div>
+    <div class="rightChart top">
+      <canvas id="donutChart"></canvas>
+    </div>
+    <div class="LeftChart last">
+      <canvas id="horizontalChart"></canvas>
+    </div>
+    <div class="rightChart last">
+      <canvas id="polarAreaChart"></canvas>
+    </div>
+  </div>
+  <!-- <main id="app"></main> -->
+  <script src="js/helpers.js"></script>
+  <script src="components/router.js"></script>
+  <script src="components/autocomplete.js"></script>
+  <script src="components/modal.js"></script>
+  <script src="components/table.js"></script>
+  <script src="components/floatingactionbutton.js"></script>
+  <script src="https://unpkg.com/ryuu.js"></script>
+  <script src="https://unpkg.com/@domoinc/domo-phoenix/build/global/domoPhoenixWithMaps.js"></script>
+  <script src="js/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const fields = ['customer_state', 'order_id', 'product_category_name_english', 'price', 'freight_value']
+    const groupBy = ['customer_state', 'product_category_name_english', 'price', 'freight_value'];
+    domo.get(`/data/v1/Olist_ds?fields=${fields.join()}&groupby=${groupBy.join()}`)
+      .then(function (leads) {
+        console.log("leads", leads);
+        leads = leads.sort((a, b) => (b.price - a.price))
+        const topFiveRecords = leads.slice(0, 5);
+        const fiveRecords = leads.slice(4,9);
+        const SevenRecords = leads.slice(5, 12);
+        const TenRecords = leads.slice(10, 21);
+        let orderDataArr = [];
+        let customerStateLabelArr = [];
+        // Chart 1 -> line
+        for(const iterator of TenRecords) {
+          customerStateLabelArr.push(iterator.customer_state);
+          orderDataArr.push(iterator.order_id);
+        }
+        let productCategory = [];
+        let priceDataArr = [];
+        // Chart 2 -> Doughnut
+        for(const iterator of SevenRecords){
+          productCategory.push(iterator.product_category_name_english);
+          priceDataArr.push(iterator.price);
+        }
+        let newCustomerState = [];
+        let freightCharges = [];
+        // chart 3 -> bar
+        for (const iterator of topFiveRecords) {
+          newCustomerState.push(iterator.customer_state)
+          freightCharges.push(Math.round(iterator.freight_value));
+        }
+        let newProductCategory = [];
+        let newFreightCharges = [];
+        // chart 4 -> bar
+        for (const iterator of fiveRecords) {
+          newProductCategory.push(iterator.product_category_name_english)
+          newFreightCharges.push(Math.round(iterator.freight_value));
+        }
+
+        // Line chart
+        const ctx = document.getElementById('myChart');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: customerStateLabelArr,
+            datasets: [{
+              label: 'Total orders',
+              data: orderDataArr,
+              fill: false,
+              borderColor: '#896A67',
+              backgroundColor: '#EFF9F0',
+              // tension: 0.3
+            }]
+          },
+          options: {
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+              },
+              title: {
+                display: true,
+                text: 'Order quantity by state'
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: '#13070C', // Color of the y-axis labels
+                },
+                title: {
+                  display: true,
+                  text: 'customer_state', // X-axis label
+                  color: '#13070C', // Axis title color
+                  font: {
+                    family: 'open sans',
+                    size: 15
+                  }
+                }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  color: '#13070C', // Color of the y-axis labels
+                },
+                title: {
+                  display: true,
+                  text: 'order_count', // X-axis label
+                  color: '#13070C', // Axis title color
+                  font: {
+                    family: 'open sans',
+                    size: 15
+                  }
+                },
+                border: {
+                  color: '#DDC8C4', // Color of the y-axis line
+                }
+              }
+            }
+          }
+        });
+
+        // Donut chart
+        const donutCtx = document.getElementById('donutChart');
+        new Chart(donutCtx, {
+          type: 'doughnut', // Specify the chart type
+          data: {
+            labels: productCategory, // Set the labels for the donut chart
+            datasets: [{
+              label: 'Sales by Customer_state', // Name of the dataset
+              data: priceDataArr, // Data points for the donut chart
+              backgroundColor: [
+                '#82DDF0','#5296A5','#FCD7AD','#F6C28B','#E8DCB9','#ECFEE8','#6EA4BF','#A6C36F','#A49694','#D7A6B3'
+              ],
+              borderColor: [
+                '#82DDF0', '#5296A5', '#FCD7AD', '#F6C28B', '#E8DCB9', '#ECFEE8', '#6EA4BF', '#A6C36F', '#A49694', '#D7A6B3'
+              ],
+              borderRadius: 4,
+              spacing: 8,
+              borderWidth: 2 // Width of the border
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+              },
+              title: {
+                display: true,
+                text: 'Total price by Product'
+              }
+            }
+          }
+        });
+
+
+      // Horizontal chart
+      const horizontalCtx = document.getElementById('horizontalChart');
+        new Chart(horizontalCtx, {
+            type: 'bar',
+            data: {
+            labels: newCustomerState,
+            datasets: [{
+              axis: 'y',
+              label: 'Freight charges by customer state',
+              data: freightCharges,
+              fill: false,
+              backgroundColor: ['#C6F8E8', '#BBD9F5', '#F7F1D4', '#FAD7E5', '#EDEDF0'],
+              borderColor: ['#C6F8E8', '#BBD9F5', '#F7F1D4', '#FAD7E5', '#EDEDF0'],
+              borderWidth: 1
+            }]
+          },
+            options: {
+              indexAxis: 'y',
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                },
+                title: {
+                  display: true,
+                  text: 'Freight charges by state'
+                }
+              },
+              scales: {
+                x: {
+                  ticks: {
+                    color: '#13070C', // Color of the y-axis labels
+                  },
+                  title: {
+                    display: true,
+                    text: 'freight_charges', // X-axis label
+                    color: '#13070C', // Axis title color
+                    font: {
+                      family: 'open sans',
+                      size: 15
+                    }
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    color: '#13070C', // Color of the y-axis labels
+                  },
+                  title: {
+                    display: true,
+                    text: 'customer_state', // X-axis label
+                    color: '#13070C', // Axis title color
+                    font: {
+                      family: 'open sans',
+                      size: 15
+                    }
+                  },
+                  border: {
+                    color: '#DDC8C4', // Color of the y-axis line
+                  }
+                }
+              }
+            },
+          })
+        // polarArea chart
+        const radarCtx = document.getElementById('polarAreaChart');
+        new Chart(radarCtx, {
+          type: 'polarArea',
+          data: {
+            labels: newProductCategory, // Product categories as labels
+            datasets: [{
+              label: 'Average Price by Category',
+              data: newFreightCharges, // Average prices as data points
+              backgroundColor: ['#C3DBC5', '#E3B5A4', '#628395', '#7A5C58', '#625834'],
+              borderColor: ['#C3DBC5', '#E3B5A4', '#628395', '#7A5C58', '#625834'],
+              borderRadius: 2,
+              spacing: 5,
+              // pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+              // pointBorderColor: '#fff',
+              // pointHoverBackgroundColor: ['#C3DBC5', '#E3B5A4',],
+              // pointHoverBorderColor: ['#C3DBC5', '#E3B5A4',]
+            }]
+          },
+          options: {
+            scales: {
+              r: {
+                angleLines: {
+                  display: false
+                },
+                suggestedMin: 0,
+                suggestedMax: 10 // Adjust based on the range of your data
+              }
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+              },
+              title: {
+                display: true,
+                text: 'Freight Charges by Product'
+              }
+            }
+          }
+        });
+      })
+  </script>
+</body>
+</html>
